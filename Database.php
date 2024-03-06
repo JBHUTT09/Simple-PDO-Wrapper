@@ -108,23 +108,23 @@ class Database {
 	/**
 	 * Returns a PDO object representing the specified connection.
 	 * 
-	 * @param string $connection
+	 * @param string $connection_id
 	 * @return PDO
 	 */
-	public function &connect( string $connection ): \PDO {
-		if ( !isset( $this->connections[ $connection ] ) ) {
-			throw new \Exception( "Unknown database connection '{$connection}'." );
+	public function &connect( string $connection_id ): \PDO {
+		if ( !isset( $this->connections[ $connection_id ] ) ) {
+			throw new \Exception( "Unknown database connection '{$connection_id}'." );
 		}
 		// establish a connection if one doesn't already exist
-		if ( !isset( $this->connections[ $connection ][ 'connection' ] ) ) {
-			$this->connections[  $connection ][ 'connection' ] = new \PDO(
-				"mysql:host={$this->connections[ $connection ][ 'host' ]};dbname={$this->connections[ $connection ][ 'database' ]};charset=utf8",
-				"{$this->connections[ $connection ][ 'username' ]}",
-				"{$this->connections[ $connection ][ 'password' ]}",
-				[ \PDO::ATTR_PERSISTENT => $this->connections[ $connection ][ 'persistent' ] ?? true ]
+		if ( !isset( $this->connections[ $connection_id ][ 'connection' ] ) ) {
+			$this->connections[  $connection_id ][ 'connection' ] = new \PDO(
+				"mysql:host={$this->connections[ $connection_id ][ 'host' ]};dbname={$this->connections[ $connection_id ][ 'database' ]};charset=utf8",
+				"{$this->connections[ $connection_id ][ 'username' ]}",
+				"{$this->connections[ $connection_id ][ 'password' ]}",
+				[ \PDO::ATTR_PERSISTENT => $this->connections[ $connection_id ][ 'persistent' ] ?? true ]
 			);
 		}
-		return $this->connections[ $connection ][ 'connection' ];
+		return $this->connections[ $connection_id ][ 'connection' ];
 	}
 	
 	/**
@@ -134,14 +134,14 @@ class Database {
 	 * when you're done with it or you may run into issues executing multiple queries, especially
 	 * if you are using stored procedures.
 	 * 
-	 * @param string $connection
+	 * @param string $connection_id
 	 * @param string $query_text
 	 * @param array $prepared (Optional) Array of values to be prepared.
 	 * @param int $return (Optional) What to return. Defaults to the PDOStatement.
 	 * @return PDOStatement|int The PDOStatement representing the query, the last inserted id, or the count of affected rows.
 	 */
-	public function query( string $connection, string $query_text, array $prepared=[], int $return=self::QUERY_RETURN_PDO ):\PDOStatement|int {
-		$database = $this->connect( $connection );
+	public function query( string $connection_id, string $query_text, array $prepared=[], int $return=self::QUERY_RETURN_PDO ):\PDOStatement|int {
+		$database = $this->connect( $connection_id );
 		$pdo = $database->prepare( $query_text );
 		// As of PHP 8.0.0 PDOStatement::execute() throws a PDOException on failure by
 		// default, so there is no need to check if the returned value is false.
@@ -163,27 +163,27 @@ class Database {
 	/**
 	 * Begins a transaction on the specified connection.
 	 * 
-	 * @param string $connection
+	 * @param string $connection_id
 	 */
-	public function beginTransaction( string $connection ):void {
-		$this->connect( $connection )->beginTransaction();
+	public function beginTransaction( string $connection_id ):void {
+		$this->connect( $connection_id )->beginTransaction();
 	}
 	
 	/**
 	 * Rolls back a transaction on the specified connection.
 	 * 
-	 * @param string $connection
+	 * @param string $connection_id
 	 */
-	public function rollBack( string $connection ):void {
-		$this->connect( $connection )->rollBack();
+	public function rollBack( string $connection_id ):void {
+		$this->connect( $connection_id )->rollBack();
 	}
 	
 	/**
 	 * Commits a transaction on the specified connection.
 	 * 
-	 * @param string $connection
+	 * @param string $connection_id
 	 */
-	public function commit( string $connection ):void {
-		$this->connect( $connection )->commit();
+	public function commit( string $connection_id ):void {
+		$this->connect( $connection_id )->commit();
 	}
 }
