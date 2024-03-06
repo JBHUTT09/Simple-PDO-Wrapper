@@ -1,7 +1,5 @@
 <?php
 
-namespace Roost;
-
 /**
  * Simple PDO database wrapper class.
  */
