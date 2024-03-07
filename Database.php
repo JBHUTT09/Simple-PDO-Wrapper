@@ -36,7 +36,7 @@ class Database {
 	 * 
 	 * @var array
 	 */
-	protected $required_connection_keys = [
+	protected static $required_connection_keys = [
 		'connection_id',
 		'host',
 		'database',
@@ -45,11 +45,19 @@ class Database {
 	];
 	
 	/**
-	 * @param string|array $connections A path to an ini file, a directory of ini files, or an array of connection arrays.
+	 * 
+	 */
+	protected static $supported_config_formats = [
+		'ini',
+		'json',
+	];
+	
+	/**
+	 * @param string|array $connections A path to a config file, a directory of config files, or an array of connection arrays.
 	 */
 	public function __construct( string|array $connections ) {
 		if ( is_string( $connections ) ) {
-			$connections = is_dir( $connections ) ? static::parseConnectionInis( $connections ) : [ static::parceConnectionIni( $connections ) ];
+			$connections = is_dir( $connections ) ? static::parseConnectionConfigs( $connections ) : [ static::parseConnectionConfig( $connections ) ];
 		}
 		foreach ( $connections as $connection ) {
 			$this->addConnection( $connection );
@@ -57,32 +65,59 @@ class Database {
 	}
 	
 	/**
-	 * Parses a directory of connection ini files into a connections array.
+	 * Parses a directory of connection config files into a connections array.
 	 * 
-	 * @param string $dir The directory containing the ini files.
+	 * @param string $dir The directory containing the config files.
 	 * @return array
 	 */
-	public static function parseConnectionInis( string $dir ):array {
+	public static function parseConnectionConfigs( string $dir ):array {
 		$connections = [];
 		foreach ( new \DirectoryIterator( $dir ) as $item ) {
-			if ( !$item->isDot() ) {
-				$connections[] = static::parceConnectionIni( $item->getRealPath() );
+			if ( !$item->isDot() && in_array( $item->getExtension(), static::$supported_config_formats ) ) {
+				$connections[] = static::parseConnectionConfig( $item );
 			}
 		}
 		return $connections;
 	}
 	
 	/**
-	 * Parses an ini file into a connection array.
+	 * Parses a config file into a connection array.
+	 * 
+	 * @param string $file The path to the config file.
+	 * @param bool $throw (Optional) If true, an exception will be thrown for an unsupported file type. Defaults to true.
+	 * @return array
+	 */
+	public static function parseConnectionConfig( string|\SplFileInfo $file, bool $throw=true ):array {
+		if ( is_string( $file ) ) {
+			$file = new \SplFileInfo( $file );
+		}
+		switch ( $file->getExtension() ) {
+			case 'ini':
+				$connection = array_change_key_case( parse_ini_file( $file->getRealPath() ) );
+				break;
+			case 'json':
+				$connection = array_change_key_case( json_decode( file_get_contents( $file->getRealPath() ), true ) );
+				break;
+			default:
+				if ( $throw ) {
+					throw new \Exception( "Unsupported connection config file type: {$file->getExtension()}" );
+				}
+				$connection = [];
+		}
+		return static::processConfigConnectionArray( $connection );
+	}
+	
+	/**
+	 * Processes the connection array parsed from a config file.
 	 * Broken out into its own method for potential future cases
 	 * in which someone extends this class and needs to further manipulate the data
 	 * before returning it.
 	 * 
-	 * @param string $file The path to the ini file.
+	 * @param string $file The path to the config file.
 	 * @return array
 	 */
-	public static function parceConnectionIni( string $file ):array {
-		return array_change_key_case( parse_ini_file( $file ) );
+	public static function processConfigConnectionArray( array $connection ):array {
+		return $connection;
 	}
 	
 	/**
@@ -95,7 +130,7 @@ class Database {
 		if ( isset( $this->connections[ $connection[ 'connection_id' ] ][ 'connection' ] ) ) {
 			throw new \Exception( 'Cannot override established database connection.' );
 		}
-		foreach ( $this->required_connection_keys as $key ) {
+		foreach ( static::$required_connection_keys as $key ) {
 			if ( !isset( $connection[ $key ] ) ) {
 				throw new \Exception( "Second argument missing required key '{$key}'." );
 			}
