@@ -45,7 +45,9 @@ class Database {
 	];
 	
 	/**
+	 * The supported file types/extensions for config files.
 	 * 
+	 * @var array
 	 */
 	protected static $supported_config_formats = [
 		'ini',
