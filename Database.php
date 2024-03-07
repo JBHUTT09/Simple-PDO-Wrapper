@@ -3,7 +3,8 @@
 /**
  * Simple PDO database wrapper class.
  */
-class Database {
+class Database
+{
 	/* Constants */
 	public const int QUERY_RETURN_PDO = 0;
 	public const int QUERY_RETURN_ID = 1;
@@ -57,12 +58,13 @@ class Database {
 	/**
 	 * @param string|array $connections A path to a config file, a directory of config files, or an array of connection arrays.
 	 */
-	public function __construct( string|array $connections ) {
-		if ( is_string( $connections ) ) {
-			$connections = is_dir( $connections ) ? static::parseConnectionConfigs( $connections ) : [ static::parseConnectionConfig( $connections ) ];
+	public function __construct(string|array $connections)
+	{
+		if (is_string($connections)) {
+			$connections = is_dir($connections) ? static::parseConnectionConfigs($connections) : [static::parseConnectionConfig($connections)];
 		}
-		foreach ( $connections as $connection ) {
-			$this->addConnection( $connection );
+		foreach ($connections as $connection) {
+			$this->addConnection($connection);
 		}
 	}
 	
@@ -72,11 +74,12 @@ class Database {
 	 * @param string $dir The directory containing the config files.
 	 * @return array
 	 */
-	public static function parseConnectionConfigs( string $dir ):array {
+	public static function parseConnectionConfigs(string $dir): array
+	{
 		$connections = [];
-		foreach ( new \DirectoryIterator( $dir ) as $item ) {
-			if ( !$item->isDot() && in_array( $item->getExtension(), static::$supported_config_formats ) ) {
-				$connections[] = static::parseConnectionConfig( $item );
+		foreach (new \DirectoryIterator($dir) as $item) {
+			if (!$item->isDot() && in_array($item->getExtension(), static::$supported_config_formats)) {
+				$connections[] = static::parseConnectionConfig($item);
 			}
 		}
 		return $connections;
@@ -89,24 +92,26 @@ class Database {
 	 * @param bool $throw (Optional) If true, an exception will be thrown for an unsupported file type. Defaults to true.
 	 * @return array
 	 */
-	public static function parseConnectionConfig( string|\SplFileInfo $file, bool $throw=true ):array {
-		if ( is_string( $file ) ) {
-			$file = new \SplFileInfo( $file );
+	public static function parseConnectionConfig(string|\SplFileInfo $file, bool $throw = true): array
+	{
+		if (is_string($file)) {
+			$file = new \SplFileInfo($file);
 		}
-		switch ( $file->getExtension() ) {
+		switch ($file->getExtension()) {
 			case 'ini':
-				$connection = array_change_key_case( parse_ini_file( $file->getRealPath() ) );
+				$connection = array_change_key_case(parse_ini_file($file->getRealPath()));
 				break;
 			case 'json':
-				$connection = array_change_key_case( json_decode( file_get_contents( $file->getRealPath() ), true ) );
+				$connection = array_change_key_case(json_decode(file_get_contents($file->getRealPath()), true));
 				break;
 			default:
-				if ( $throw ) {
-					throw new \Exception( "Unsupported connection config file type: {$file->getExtension()}" );
+				if ($throw) {
+					throw new \Exception("Unsupported connection config file type: {$file->getExtension()}");
 				}
 				$connection = [];
+				break;
 		}
-		return static::processConfigConnectionArray( $connection );
+		return static::processConfigConnectionArray($connection);
 	}
 	
 	/**
@@ -118,7 +123,8 @@ class Database {
 	 * @param string $file The path to the config file.
 	 * @return array
 	 */
-	public static function processConfigConnectionArray( array $connection ):array {
+	public static function processConfigConnectionArray(array $connection): array
+	{
 		return $connection;
 	}
 	
@@ -127,17 +133,18 @@ class Database {
 	 * 
 	 * @param array $connection An array containing the required keys for a database connection.
 	 */
-	public function addConnection( array $connection ):void {
+	public function addConnection(array $connection): void
+	{
 		// ultimately an arbitrary limitation, but it should make debugging potential issues much simpler
-		if ( isset( $this->connections[ $connection[ 'connection_id' ] ][ 'connection' ] ) ) {
-			throw new \Exception( 'Cannot override established database connection.' );
+		if (isset($this->connections[$connection['connection_id']]['connection'])) {
+			throw new \Exception('Cannot override established database connection.');
 		}
-		foreach ( static::$required_connection_keys as $key ) {
-			if ( !isset( $connection[ $key ] ) ) {
-				throw new \Exception( "Second argument missing required key '{$key}'." );
+		foreach (static::$required_connection_keys as $key) {
+			if (!isset($connection[$key])) {
+				throw new \Exception("Second argument missing required key '{$key}'.");
 			}
 		}
-		$this->connections[ $connection[ 'connection_id' ] ] = $connection;
+		$this->connections[$connection['connection_id']] = $connection;
 	}
 	
 	/**
@@ -146,20 +153,21 @@ class Database {
 	 * @param string $connection_id
 	 * @return PDO
 	 */
-	public function &connect( string $connection_id ): \PDO {
-		if ( !isset( $this->connections[ $connection_id ] ) ) {
-			throw new \Exception( "Unknown database connection '{$connection_id}'." );
+	public function &connect(string $connection_id): \PDO
+	{
+		if (!isset($this->connections[$connection_id])) {
+			throw new \Exception("Unknown database connection '{$connection_id}'.");
 		}
 		// establish a connection if one doesn't already exist
-		if ( !isset( $this->connections[ $connection_id ][ 'connection' ] ) ) {
-			$this->connections[  $connection_id ][ 'connection' ] = new \PDO(
-				"mysql:host={$this->connections[ $connection_id ][ 'host' ]};dbname={$this->connections[ $connection_id ][ 'database' ]};charset=utf8",
-				"{$this->connections[ $connection_id ][ 'username' ]}",
-				"{$this->connections[ $connection_id ][ 'password' ]}",
-				[ \PDO::ATTR_PERSISTENT => $this->connections[ $connection_id ][ 'persistent' ] ?? true ]
+		if (!isset($this->connections[$connection_id]['connection'])) {
+			$this->connections[ $connection_id]['connection'] = new \PDO(
+				"mysql:host={$this->connections[$connection_id]['host']};dbname={$this->connections[$connection_id]['database']};charset=utf8",
+				"{$this->connections[$connection_id]['username']}",
+				"{$this->connections[$connection_id]['password']}",
+				[\PDO::ATTR_PERSISTENT => $this->connections[$connection_id]['persistent'] ?? true]
 			);
 		}
-		return $this->connections[ $connection_id ][ 'connection' ];
+		return $this->connections[$connection_id]['connection'];
 	}
 	
 	/**
@@ -175,14 +183,15 @@ class Database {
 	 * @param int $return (Optional) What to return. Defaults to the PDOStatement.
 	 * @return PDOStatement|int The PDOStatement representing the query, the last inserted id, or the count of affected rows.
 	 */
-	public function query( string $connection_id, string $query_text, array $prepared=[], int $return=self::QUERY_RETURN_PDO ):\PDOStatement|int {
-		$database = $this->connect( $connection_id );
-		$pdo = $database->prepare( $query_text );
+	public function query(string $connection_id, string $query_text, array $prepared=[], int $return=self::QUERY_RETURN_PDO): \PDOStatement|int
+	{
+		$database = $this->connect($connection_id);
+		$pdo = $database->prepare($query_text);
 		// As of PHP 8.0.0 PDOStatement::execute() throws a PDOException on failure by
 		// default, so there is no need to check if the returned value is false.
 		// See: https://www.php.net/manual/en/pdo.error-handling.php
-		$pdo->execute( $prepared );
-		switch( $return ) {
+		$pdo->execute($prepared);
+		switch($return) {
 			case self::QUERY_RETURN_ID:
 				$pdo->closeCursor();
 				return $database->lastInsertId();
@@ -190,9 +199,8 @@ class Database {
 				$count = $pdo->rowCount();
 				$pdo->closeCursor();
 				return $count;
-			default:
-				return $pdo;
 		}
+		return $pdo;
 	}
 	
 	/**
@@ -200,8 +208,9 @@ class Database {
 	 * 
 	 * @param string $connection_id
 	 */
-	public function beginTransaction( string $connection_id ):void {
-		$this->connect( $connection_id )->beginTransaction();
+	public function beginTransaction(string $connection_id): void
+	{
+		$this->connect($connection_id)->beginTransaction();
 	}
 	
 	/**
@@ -209,8 +218,9 @@ class Database {
 	 * 
 	 * @param string $connection_id
 	 */
-	public function rollBack( string $connection_id ):void {
-		$this->connect( $connection_id )->rollBack();
+	public function rollBack(string $connection_id): void
+	{
+		$this->connect($connection_id)->rollBack();
 	}
 	
 	/**
@@ -218,7 +228,8 @@ class Database {
 	 * 
 	 * @param string $connection_id
 	 */
-	public function commit( string $connection_id ):void {
-		$this->connect( $connection_id )->commit();
+	public function commit(string $connection_id): void
+	{
+		$this->connect($connection_id)->commit();
 	}
 }
